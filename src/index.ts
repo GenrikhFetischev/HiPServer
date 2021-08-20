@@ -1,20 +1,15 @@
 import "./devReload";
-import { createChatApiServer } from "./chatApi";
-import { createIncomingApiServer } from "./incomingApi";
-import { Contacts } from "./contacts";
-import { Dispatcher } from "./dispatcher";
+import { ChatWsServer } from "./chatApi";
+import { PublicWsServer } from "./publicWsServer";
 
 console.clear();
 
 (async () => {
-  const contacts = new Contacts([
-    {
-      name: "User",
-      networkAddress: "127.0.0.1:6666",
-    },
-  ]);
-  const dispatcher = new Dispatcher();
+  const chatServer = new ChatWsServer();
+  const incomingMessageServer = new PublicWsServer([]);
 
-  const chatServer = createChatApiServer(dispatcher);
-  const incomingMessageServer = createIncomingApiServer(contacts, dispatcher);
+
+
+
+
 })();

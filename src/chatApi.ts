@@ -1,49 +1,38 @@
 import ws, { Data } from "ws";
-import { clientPort } from "./constants";
-import { messageForwarder } from "./messageForwarder";
+import { chatPort } from "./constants";
 import { parseMessage } from "./messageParser";
+import WebSocket from "ws";
 import { storeMessage } from "./storage";
-import { Message } from "./types";
-import { Dispatcher } from "./dispatcher";
 
-const createFinalMessage = (sent: boolean, msg?: Message) => {
-  const final = {
-    sent,
-    message: msg,
+export class ChatWsServer {
+  private server: WebSocket.Server;
+  private chatClientSockets: WebSocket[] = [];
+
+  constructor() {
+    this.server = new ws.Server({ port: chatPort });
+    this.server.on("connection", this.connectionHandler);
+  }
+
+  private connectionHandler = (socket: WebSocket) => {
+    this.chatClientSockets.push(socket);
+    const socketIndex = this.chatClientSockets.length - 1;
+    socket.on("message", this.messageHandler);
+    socket.on("close", this.createCloseConnectionHandler(socketIndex));
   };
 
-  return JSON.stringify(final);
-};
+  private createCloseConnectionHandler = (index: number) => () => {
+    this.chatClientSockets.splice(index, 1);
+  };
 
-const createMessageHandler = (socket: ws) => async (msg: Data) => {
-  const parsedMessage = parseMessage(msg);
-  if (!parsedMessage) {
-    socket.send(createFinalMessage(false));
-    return;
-  }
+  private messageHandler = async (msg: Data) => {
+    const message = parseMessage(msg);
+    if (!message) {
+      return;
+    }
 
-  const { sent } = await messageForwarder(parsedMessage);
+    // TODO connect to public ws server
 
-  if (sent) {
-    await storeMessage(parsedMessage);
-  }
-  socket.send(createFinalMessage(sent, parsedMessage));
-};
+  };
+}
 
-export const createChatApiServer = (dispatcher: Dispatcher) => {
-  const server = new ws.Server({ port: clientPort });
 
-  server.on("connection", (socket, req) => {
-    dispatcher.addClientSocket(socket);
-    const from = `${req.socket.remoteAddress}:${req.socket.remotePort}`;
-    console.log(from);
-
-    socket.on("message", createMessageHandler(socket));
-    socket.on("close", () => dispatcher.removeClientSocket(socket));
-    socket.on("error", () => dispatcher.removeClientSocket(socket));
-
-    socket.send(JSON.stringify({ connected: true }));
-  });
-
-  return server;
-};
