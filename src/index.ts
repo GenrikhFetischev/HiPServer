@@ -1,15 +1,10 @@
 import "./devReload";
-import { ChatWsServer } from "./chatApi";
-import { PublicWsServer } from "./publicWsServer";
+import { createChatApi } from "./rxChatApi";
 
 console.clear();
 
 (async () => {
-  const chatServer = new ChatWsServer();
-  const incomingMessageServer = new PublicWsServer([]);
+  const chatApi = createChatApi();
 
-
-
-
-
+  chatApi.subscribe(console.log);
 })();
