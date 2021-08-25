@@ -1,10 +1,18 @@
 import "./devReload";
-import { createChatApi } from "./rxChatApi";
-
-console.clear();
+import { PublicApi } from "./publicApi";
+import { ChatApi } from "./chatApi";
 
 (async () => {
-  const chatApi = createChatApi();
+  const chatApi = new ChatApi();
+  const publicApi = new PublicApi();
 
-  chatApi.subscribe(console.log);
+  chatApi.incomingStream.subscribe((msg) => {
+    console.log("Chat:", msg);
+    publicApi.sendMessage(msg);
+  });
+
+  publicApi.incomingStream.subscribe((msg) => {
+    console.log("Got from contact", msg);
+    chatApi.sendMessage(msg);
+  });
 })();
