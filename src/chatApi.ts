@@ -17,7 +17,7 @@ export class ChatApi {
   private highOrderIncomingStream = new Subject<Observable<Message>>();
   private server: Server;
   private sockets: WebSocket[] = [];
-  public incomingStream: Observable<Message>;
+  public messageStream: Observable<Message>;
 
   constructor() {
     this.server = new ws.Server({ port: chatPort });
@@ -31,7 +31,7 @@ export class ChatApi {
       )
       .subscribe();
 
-    this.incomingStream = this.highOrderIncomingStream.pipe(mergeAll());
+    this.messageStream = this.highOrderIncomingStream.pipe(mergeAll());
   }
 
   private setSocket = (socket: WebSocket) => {

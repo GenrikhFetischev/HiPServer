@@ -7,3 +7,9 @@ export type Message = {
   timestamp: number;
   content: MessageContent;
 };
+
+export type Contact = {
+  name: string;
+  port: number;
+  ip: string;
+};

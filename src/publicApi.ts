@@ -13,7 +13,7 @@ export class PublicApi {
   private highOrderIncomingStream = new Subject<Observable<Message>>();
   private server: Server;
   private sockets: Map<string, WebSocket> = new Map();
-  public incomingStream: Observable<Message>;
+  public messageStream: Observable<Message>;
 
   constructor() {
     this.server = new Server({ port: publicPort });
@@ -29,7 +29,7 @@ export class PublicApi {
       )
       .subscribe();
 
-    this.incomingStream = this.highOrderIncomingStream.pipe(mergeAll());
+    this.messageStream = this.highOrderIncomingStream.pipe(mergeAll());
   }
 
   private setSocket = ({ destination, socket }: MappedIncomingConnection) => {
@@ -73,21 +73,28 @@ export class PublicApi {
   };
 
   private openSocket = (to: string) =>
-    new Promise<WebSocket>((resolve) => {
-      const socket = new WebSocket(`ws://${to}`);
-      socket.on("open", () => {
-        this.sockets.set(to, socket);
+    new Promise<WebSocket>((resolve, reject) => {
+      try {
+        const socket = new WebSocket(`ws://${to}`);
+        socket.on("open", () => {
+          this.sockets.set(to, socket);
 
-        this.observeSocket({ socket, destination: to });
-        resolve(socket);
-      });
+          this.observeSocket({ socket, destination: to });
+          resolve(socket);
+        });
+      } catch (e) {
+        reject(e);
+      }
     });
 
   public sendMessage = async (msg: Message) => {
     const { to } = msg;
     const storedSocket = this.sockets.get(to);
-    const socket = storedSocket ? storedSocket : await this.openSocket(to);
-
-    socket.send(JSON.stringify(msg));
+    try {
+      const socket = storedSocket ? storedSocket : await this.openSocket(to);
+      socket.send(JSON.stringify(msg));
+    } catch (e) {
+      console.error(e);
+    }
   };
 }
