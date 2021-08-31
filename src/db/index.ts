@@ -1,12 +1,14 @@
 import { Pool } from "pg";
 import {
+  buildConfirmReceivingCommand,
   buildDeleteContactQuery,
   buildGetMessagesForClientQuery,
   buildInsertMessageQuery,
   buildUpsertContactQuery,
+  createMeContactCommand,
   createTablesCommand,
 } from "./commands";
-import { Contact, Message } from "../types";
+import { Contact, Message, ReceiveConfirmation } from "../types";
 
 const pool = new Pool({
   database: "p2p",
@@ -15,6 +17,7 @@ const pool = new Pool({
 (async () => {
   try {
     await pool.query(createTablesCommand);
+    await pool.query(createMeContactCommand);
     console.log("Tables are ready");
   } catch (e) {
     console.error("Problem with creating tables in db");
@@ -36,4 +39,8 @@ export const saveMessage = async (msg: Message) => {
 
 export const getMessagesForContact = async (contact: Contact) => {
   return await pool.query(buildGetMessagesForClientQuery(contact));
+};
+
+export const markAsReceived = async (confirmation: ReceiveConfirmation) => {
+  return await pool.query(buildConfirmReceivingCommand(confirmation.received));
 };

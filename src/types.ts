@@ -8,6 +8,12 @@ export type Message = {
   content: MessageContent;
 };
 
+export type ReceiveConfirmation = {
+  received: number;
+};
+
+export type IncomingMessage = Message | ReceiveConfirmation;
+
 export type Contact = {
   name: string;
   port: number;

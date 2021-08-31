@@ -1,19 +1,28 @@
 import WebSocket, { Server } from "ws";
 import { publicPort } from "./constants";
 import { mergeAll, Observable, Subject, tap } from "rxjs";
-import { parseMessage } from "./messageParser";
+import {
+  filterMessage,
+  filterReceiveConfirmation,
+  parseMessage,
+} from "./messageParser";
 import { map, filter } from "rxjs/operators";
-import { Message } from "./types";
+import { Message, ReceiveConfirmation } from "./types";
 import { fromSocket, fromWsServer, IncomingConnection } from "./observables";
 import { identityFilter } from "./utils";
+import { markAsReceived, saveMessage } from "./db";
 
 type MappedIncomingConnection = { destination: string; socket: WebSocket };
 
 export class PublicApi {
   private highOrderIncomingStream = new Subject<Observable<Message>>();
+  private highOrderConfirmationStream = new Subject<
+    Observable<ReceiveConfirmation>
+  >();
   private server: Server;
   private sockets: Map<string, WebSocket> = new Map();
   public messageStream: Observable<Message>;
+  public receiveConfirmationStream: Observable<ReceiveConfirmation>;
 
   constructor() {
     this.server = new Server({ port: publicPort });
@@ -30,6 +39,9 @@ export class PublicApi {
       .subscribe();
 
     this.messageStream = this.highOrderIncomingStream.pipe(mergeAll());
+    this.receiveConfirmationStream = this.highOrderConfirmationStream.pipe(
+      mergeAll()
+    );
   }
 
   private setSocket = ({ destination, socket }: MappedIncomingConnection) => {
@@ -56,20 +68,38 @@ export class PublicApi {
       this.sockets.delete(destination);
     };
 
-    const observable = fromSocket(socket, {
+    const setFromField = (msg: Message) => {
+      msg.from = destination;
+      return msg;
+    };
+
+    const sendConfirmation = (msg: Message) => {
+      socket.send(
+        JSON.stringify({
+          received: msg.timestamp,
+        })
+      );
+    };
+
+    const connectionObservable = fromSocket(socket, {
       error: deleteSocket,
       complete: deleteSocket,
-    }).pipe(
-      map((msg) => {
-        return parseMessage(msg);
-      }),
-      filter(identityFilter),
-      map((msg) => {
-        msg.from = destination;
-        return msg;
-      })
+    }).pipe(map(parseMessage), filter(identityFilter));
+
+    const messageObservable = connectionObservable.pipe(
+      filter(filterMessage),
+      tap(saveMessage),
+      tap(sendConfirmation),
+      map(setFromField)
     );
-    this.highOrderIncomingStream.next(observable);
+
+    const confirmationStream = connectionObservable.pipe(
+      filter(filterReceiveConfirmation),
+      tap(markAsReceived)
+    );
+
+    this.highOrderConfirmationStream.next(confirmationStream);
+    this.highOrderIncomingStream.next(messageObservable);
   };
 
   private openSocket = (to: string) =>

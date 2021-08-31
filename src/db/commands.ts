@@ -1,10 +1,11 @@
 import { Contact, Message } from "../types";
+import exp from "constants";
 
 export const createTablesCommand = `
 CREATE TABLE IF NOT EXISTS contacts (
    socket        varchar(50)    primary key not null ,
    created       timestamp      not null default now(),
-   port          smallint,
+   port          int,
    name          varchar(200),
    ip            varchar(50)
 );
@@ -12,12 +13,18 @@ CREATE TABLE IF NOT EXISTS contacts (
 
 CREATE TABLE IF NOT EXISTS messages (
   id             uuid           primary key default gen_random_uuid (),
-  received       timestamp      not null default now(),  
+  received       bool           default false, 
   timestamp      int            not null,
   "from"         varchar(50)    references "contacts"(socket),
   "to"           varchar(50)    references "contacts"(socket),
   text           varchar
 )
+`;
+
+export const createMeContactCommand = `
+  insert into contacts (socket,  port, name, ip)
+  values ('me', 0, 'me', 'me' ) 
+  on conflict do nothing 
 `;
 
 export const buildUpsertContactQuery = ({ port, name, ip }: Contact) => `
@@ -51,6 +58,9 @@ export const buildGetMessagesForClientQuery = (contact: Contact) => {
     select from messages where 
     "from" = '${socket}' or 
     "to" = '${socket}' order by timestamp                       
-
   `;
 };
+
+export const buildConfirmReceivingCommand = (timestamp: number) => `
+update messages set received = true where timestamp = ${timestamp}
+`;

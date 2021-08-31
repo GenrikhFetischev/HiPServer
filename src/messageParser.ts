@@ -1,8 +1,7 @@
-import { Message } from "./types";
+import { IncomingMessage, Message, ReceiveConfirmation } from "./types";
 import { Data } from "ws";
 
 export const parseMessage = (msg: Data): Message | undefined => {
-  debugger
   try {
     return JSON.parse(String(msg)) as Message;
   } catch (e) {
@@ -10,3 +9,19 @@ export const parseMessage = (msg: Data): Message | undefined => {
     console.error(e);
   }
 };
+
+export const filterMessage = (msg: IncomingMessage): msg is Message =>
+  "timestamp" in msg && "content" in msg;
+
+export const filterReceiveConfirmation = (
+  msg: IncomingMessage
+): msg is ReceiveConfirmation => "received" in msg;
+
+export const filterToMeMessage = (msg: Message): boolean =>
+  filterMessage(msg) && msg.to === "me";
+
+
+
+
+
+

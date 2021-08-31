@@ -1,17 +1,13 @@
 import WebSocket, { Server } from "ws";
-import { chatPort, publicPort } from "./constants";
-import { from, mergeAll, Observable, scan, Subject, tap } from "rxjs";
-import { parseMessage } from "./messageParser";
+import { chatPort } from "./constants";
+import { mergeAll, Observable, Subject, tap } from "rxjs";
+import { filterToMeMessage, parseMessage } from "./messageParser";
 import { map, filter } from "rxjs/operators";
-import { Message } from "./types";
-import {
-  extractSocket,
-  fromSocket,
-  fromWsServer,
-  IncomingConnection,
-} from "./observables";
-import { identityFilter } from "./utils";
+import { IncomingMessage, Message } from "./types";
+import { extractSocket, fromSocket, fromWsServer } from "./observables";
+import { identityFilter, invertFilter } from "./utils";
 import ws from "ws";
+import { saveMessage } from "./db";
 
 export class ChatApi {
   private highOrderIncomingStream = new Subject<Observable<Message>>();
@@ -43,31 +39,28 @@ export class ChatApi {
     this.sockets.splice(index, 1);
   };
 
-  private connectionHandler = (socket: WebSocket) => {
-    const connection = fromSocket(socket, {
-      complete: this.removeSocket,
-      error: this.removeSocket,
-    });
-
-    const observer = connection.pipe(
-      map(parseMessage),
-      filter(identityFilter),
-      tap((message) => {
-        from(this.sockets)
-          .pipe(
-            filter((ws) => ws !== socket),
-            tap((ws) => {
-              ws.send(JSON.stringify(message));
-            })
-          )
-          .subscribe();
-      })
-    );
-
-    this.highOrderIncomingStream.next(observer);
+  private setFromField = (msg: Message) => {
+    msg.from = "me";
+    return msg;
   };
 
-  public sendMessage = (msg: Message) => {
+  private connectionHandler = (socket: WebSocket) => {
+    const connectionObservable = fromSocket(socket, {
+      complete: this.removeSocket,
+      error: this.removeSocket,
+    }).pipe(
+      map(parseMessage),
+      filter(identityFilter),
+      map(this.setFromField),
+      tap(saveMessage),
+      tap((msg) => this.sendMessage(msg)),
+      filter(invertFilter(filterToMeMessage))
+    );
+
+    this.highOrderIncomingStream.next(connectionObservable);
+  };
+
+  public sendMessage = (msg: IncomingMessage) => {
     this.sockets.forEach((ws) => ws.send(JSON.stringify(msg)));
   };
 }
