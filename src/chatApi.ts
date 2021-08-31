@@ -1,28 +1,29 @@
-import WebSocket, { Server } from "ws";
-import { chatPort } from "./constants";
+import WebSocket, { Server as WsServer } from "ws";
+import { createServer, Server } from "http";
 import { mergeAll, Observable, Subject, tap } from "rxjs";
+import { chatPort } from "./constants";
 import { filterToMeMessage, parseMessage } from "./messageParser";
 import { map, filter } from "rxjs/operators";
 import { IncomingMessage, Message } from "./types";
 import { extractSocket, fromSocket, fromWsServer } from "./observables";
 import { identityFilter, invertFilter } from "./utils";
-import ws from "ws";
-import { saveMessage } from "./db";
+import { markAsReceived, saveMessage } from "./db";
+import { Socket } from "net";
 
 export class ChatApi {
   private highOrderIncomingStream = new Subject<Observable<Message>>();
-  private server: Server;
-  private sockets: WebSocket[] = [];
+  private wsServer: WsServer;
+  private httpServer;
   public messageStream: Observable<Message>;
 
   constructor() {
-    this.server = new ws.Server({ port: chatPort });
+    this.wsServer = new WsServer({ noServer: true });
+    this.httpServer = this.createHttpServer();
 
-    fromWsServer(this.server)
+    fromWsServer(this.wsServer)
       .pipe(
         tap(() => console.log("Got new client connection")),
         map(extractSocket),
-        tap(this.setSocket),
         map(this.connectionHandler)
       )
       .subscribe();
@@ -30,13 +31,19 @@ export class ChatApi {
     this.messageStream = this.highOrderIncomingStream.pipe(mergeAll());
   }
 
-  private setSocket = (socket: WebSocket) => {
-    this.sockets.push(socket);
-  };
+  private createHttpServer = (): Server => {
+    const server = createServer();
 
-  private removeSocket = (socket: WebSocket) => {
-    const index = this.sockets.indexOf(socket);
-    this.sockets.splice(index, 1);
+    server.on("upgrade", (request, socket: Socket, head) => {
+      console.log(request.headers);
+
+      this.wsServer.handleUpgrade(request, socket, head, (ws) => {
+        this.wsServer.emit("connection", ws, request);
+      });
+    });
+
+    server.listen(chatPort);
+    return server;
   };
 
   private setFromField = (msg: Message) => {
@@ -44,23 +51,33 @@ export class ChatApi {
     return msg;
   };
 
+  private setReceivedFlag = (msg: Message) => {
+    msg.received = true;
+    return msg;
+  };
+
   private connectionHandler = (socket: WebSocket) => {
-    const connectionObservable = fromSocket(socket, {
-      complete: this.removeSocket,
-      error: this.removeSocket,
-    }).pipe(
+    const connectionObservable = fromSocket(socket).pipe(
       map(parseMessage),
       filter(identityFilter),
       map(this.setFromField),
+      map(this.setReceivedFlag),
       tap(saveMessage),
-      tap((msg) => this.sendMessage(msg)),
+      tap((msg) => this.sendMessage(msg, { excludeSocket: socket })),
       filter(invertFilter(filterToMeMessage))
     );
 
     this.highOrderIncomingStream.next(connectionObservable);
   };
 
-  public sendMessage = (msg: IncomingMessage) => {
-    this.sockets.forEach((ws) => ws.send(JSON.stringify(msg)));
+  public sendMessage = (
+    msg: IncomingMessage,
+    { excludeSocket }: { excludeSocket?: WebSocket } = {}
+  ) => {
+    this.wsServer.clients.forEach((ws) => {
+      if (ws !== excludeSocket) {
+        ws.send(JSON.stringify(msg));
+      }
+    });
   };
 }

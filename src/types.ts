@@ -6,6 +6,7 @@ export type Message = {
   to: string;
   timestamp: number;
   content: MessageContent;
+  received: boolean;
 };
 
 export type ReceiveConfirmation = {

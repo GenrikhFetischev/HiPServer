@@ -46,9 +46,10 @@ export const buildInsertMessageQuery = ({
   to,
   timestamp,
   content,
+  received = false,
 }: Message) => `
-  insert into messages ("from", "to", text, timestamp)
-  values ('${from}', '${to}', '${content.text}', ${timestamp});
+  insert into messages ("from", "to", text, timestamp, received)
+  values ('${from}', '${to}', '${content.text}', ${timestamp}, ${received});
 `;
 
 export const buildGetMessagesForClientQuery = (contact: Contact) => {
