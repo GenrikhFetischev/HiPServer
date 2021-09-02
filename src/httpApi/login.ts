@@ -6,6 +6,7 @@ import {
   getOriginPassHash,
   hashPassword,
   salt,
+  validatePassword,
 } from "../auth";
 
 export type LoginBody = {
@@ -21,10 +22,9 @@ export const loginHandler: RouteHandler = async (req, res) => {
     const { password } = await parseJsonPostBody<LoginBody>(req);
 
     const originPassHash = getOriginPassHash();
-
     assert(originPassHash, "impossible condition");
 
-    const isPassValid = hashPassword(password, salt) === originPassHash;
+    const isPassValid = validatePassword(password);
 
     if (!isPassValid) {
       res.writeHead(401);

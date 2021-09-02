@@ -18,7 +18,6 @@ const pool = new Pool({
   try {
     await pool.query(createTablesCommand);
     await pool.query(createMeContactCommand);
-    console.log("Tables are ready");
   } catch (e) {
     console.error("Problem with creating tables in db");
     console.error(e);
