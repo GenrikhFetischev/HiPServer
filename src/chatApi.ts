@@ -1,5 +1,6 @@
-import WebSocket, { Server as WsServer } from "ws";
+import { Socket } from "net";
 import { createServer, Server } from "http";
+import WebSocket, { Server as WsServer } from "ws";
 import { mergeAll, Observable, Subject, tap } from "rxjs";
 import { chatPort } from "./constants";
 import { filterToMeMessage, parseMessage } from "./messageParser";
@@ -7,8 +8,7 @@ import { map, filter } from "rxjs/operators";
 import { IncomingMessage, Message } from "./types";
 import { extractSocket, fromSocket, fromWsServer } from "./observables";
 import { identityFilter, invertFilter } from "./utils";
-import { markAsReceived, saveMessage } from "./db";
-import { Socket } from "net";
+import { saveMessage } from "./db";
 
 export class ChatApi {
   private highOrderIncomingStream = new Subject<Observable<Message>>();
