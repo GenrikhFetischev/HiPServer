@@ -1,24 +1,21 @@
 import { Socket } from "net";
-import { createServer, Server } from "http";
 import WebSocket, { Server as WsServer } from "ws";
 import { mergeAll, Observable, Subject, tap } from "rxjs";
-import { chatPort } from "./constants";
-import { filterToMeMessage, parseMessage } from "./messageParser";
 import { map, filter } from "rxjs/operators";
-import { IncomingMessage, Message } from "./types";
-import { extractSocket, fromSocket, fromWsServer } from "./observables";
-import { identityFilter, invertFilter } from "./utils";
-import { saveMessage } from "./db";
+import { filterToMeMessage, parseMessage } from "../messageParser";
+import { IncomingMessage, Message } from "../types";
+import { extractSocket, fromSocket, fromWsServer } from "../observables";
+import { identityFilter, invertFilter } from "../utils";
+import { saveMessage } from "../db";
+import { UpgradeHandler } from "./wsRouter";
 
-export class ChatApi {
+export class PrivateWsApi {
   private highOrderIncomingStream = new Subject<Observable<Message>>();
   private wsServer: WsServer;
-  private httpServer;
   public messageStream: Observable<Message>;
 
   constructor() {
     this.wsServer = new WsServer({ noServer: true });
-    this.httpServer = this.createHttpServer();
 
     fromWsServer(this.wsServer)
       .pipe(
@@ -30,21 +27,6 @@ export class ChatApi {
 
     this.messageStream = this.highOrderIncomingStream.pipe(mergeAll());
   }
-
-  private createHttpServer = (): Server => {
-    const server = createServer();
-
-    server.on("upgrade", (request, socket: Socket, head) => {
-      console.log(request.headers);
-
-      this.wsServer.handleUpgrade(request, socket, head, (ws) => {
-        this.wsServer.emit("connection", ws, request);
-      });
-    });
-
-    server.listen(chatPort);
-    return server;
-  };
 
   private setFromField = (msg: Message) => {
     msg.from = "me";
@@ -68,6 +50,14 @@ export class ChatApi {
     );
 
     this.highOrderIncomingStream.next(connectionObservable);
+  };
+
+  public upgradeConnectionHandler: UpgradeHandler = (request, socket, head) => {
+    console.log(request.headers);
+
+    this.wsServer.handleUpgrade(request, socket as Socket, head, (ws) => {
+      this.wsServer.emit("connection", ws, request);
+    });
   };
 
   public sendMessage = (

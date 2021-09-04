@@ -5,6 +5,7 @@ const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
 });
+rl.on("SIGINT", () => process.exit(130));
 
 const askQuestion = (question: string) =>
   new Promise<string>((resolve) => {
@@ -29,6 +30,7 @@ export const inputPassword = () =>
         loopCondition = false;
         console.log("Password confirmed");
         resolve(true);
+        rl.close();
       } else {
         console.log("Confirmation is incorrect, let's do it again");
       }

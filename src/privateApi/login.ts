@@ -1,19 +1,13 @@
 import assert from "assert";
-import { RouteHandler } from "./router";
 import { parseJsonPostBody } from "./utils";
-import {
-  generateJwtToken,
-  getOriginPassHash,
-  hashPassword,
-  salt,
-  validatePassword,
-} from "../auth";
+import { generateJwtToken, getOriginPassHash, validatePassword } from "../auth";
+import { HttpRouteHandler } from "./httpRouter";
 
 export type LoginBody = {
   password: string;
 };
 
-export const loginHandler: RouteHandler = async (req, res) => {
+export const loginHandler: HttpRouteHandler = async (req, res) => {
   try {
     assert(
       req.headers["content-type"] === "application/json",
@@ -29,11 +23,9 @@ export const loginHandler: RouteHandler = async (req, res) => {
     if (!isPassValid) {
       res.writeHead(401);
       res.write("Password is incorrect");
-      res.end();
     } else {
       res.writeHead(200);
       res.write(generateJwtToken(originPassHash));
-      res.end();
     }
 
     res.end();

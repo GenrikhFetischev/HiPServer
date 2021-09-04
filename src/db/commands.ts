@@ -1,5 +1,4 @@
 import { Contact, Message } from "../types";
-import exp from "constants";
 
 export const createTablesCommand = `
 CREATE TABLE IF NOT EXISTS contacts (
