@@ -1,4 +1,4 @@
-import { Contact, Message } from "../types";
+import { Contact, Message, MessageStatus } from "../types";
 
 export const createTablesCommand = `
 CREATE TABLE IF NOT EXISTS contacts (
@@ -12,8 +12,9 @@ CREATE TABLE IF NOT EXISTS contacts (
 
 CREATE TABLE IF NOT EXISTS messages (
   id             uuid           primary key default gen_random_uuid (),
-  received       bool           default false, 
+  status         int8           default 0, 
   timestamp      int            not null,
+  messageId      int            not  null,
   "from"         varchar(50)    references "contacts"(socket),
   "to"           varchar(50)    references "contacts"(socket),
   text           varchar
@@ -45,10 +46,10 @@ export const buildInsertMessageQuery = ({
   to,
   timestamp,
   content,
-  received = false,
+  status = MessageStatus.Sent,
 }: Message) => `
-  insert into messages ("from", "to", text, timestamp, received)
-  values ('${from}', '${to}', '${content.text}', ${timestamp}, ${received});
+  insert into messages ("from", "to", text, timestamp, status)
+  values ('${from}', '${to}', '${content.text}', ${timestamp}, ${status});
 `;
 
 export const buildGetMessagesForClientQuery = (contact: Contact) => {
@@ -61,6 +62,9 @@ export const buildGetMessagesForClientQuery = (contact: Contact) => {
   `;
 };
 
-export const buildConfirmReceivingCommand = (timestamp: number) => `
-update messages set received = true where timestamp = ${timestamp}
+export const buildSetMessageStatusCommand = (
+  timestamp: number,
+  status: MessageStatus
+) => `
+    update messages set status = ${status} where timestamp = ${timestamp}
 `;

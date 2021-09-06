@@ -6,11 +6,17 @@ import {
   filterReceiveConfirmation,
   parseMessage,
 } from "./messageParser";
-import { map, filter } from "rxjs/operators";
-import { Message, ReceiveConfirmation } from "./types";
+import { filter, map } from "rxjs/operators";
+import {
+  EventTypes,
+  FailSendNotification,
+  Message,
+  MessageStatus,
+  ReceiveConfirmation,
+} from "./types";
 import { fromSocket, fromWsServer, IncomingConnection } from "./observables";
 import { identityFilter } from "./utils";
-import { markAsReceived, saveMessage } from "./db";
+import { saveMessage, setMessageStatus } from "./db";
 
 type MappedIncomingConnection = { destination: string; socket: WebSocket };
 
@@ -19,9 +25,11 @@ export class PublicApi {
   private highOrderConfirmationStream = new Subject<
     Observable<ReceiveConfirmation>
   >();
+
   private server: Server;
   private sockets: Map<string, WebSocket> = new Map();
   public messageStream: Observable<Message>;
+  public sendingFailStream = new Subject<FailSendNotification>();
   public receiveConfirmationStream: Observable<ReceiveConfirmation>;
 
   constructor() {
@@ -74,11 +82,12 @@ export class PublicApi {
     };
 
     const sendConfirmation = (msg: Message) => {
-      socket.send(
-        JSON.stringify({
-          received: msg.timestamp,
-        })
-      );
+      const confirmation: ReceiveConfirmation = {
+        messageId: msg.messageId,
+        type: EventTypes.ReceiveConfirmation,
+      };
+
+      socket.send(JSON.stringify(confirmation));
     };
 
     const connectionObservable = fromSocket(socket, {
@@ -95,7 +104,7 @@ export class PublicApi {
 
     const confirmationStream = connectionObservable.pipe(
       filter(filterReceiveConfirmation),
-      tap(markAsReceived)
+      tap((event) => setMessageStatus(event))
     );
 
     this.highOrderConfirmationStream.next(confirmationStream);
@@ -112,6 +121,7 @@ export class PublicApi {
           this.observeSocket({ socket, destination: to });
           resolve(socket);
         });
+        socket.on("error", reject);
       } catch (e) {
         reject(e);
       }
@@ -124,6 +134,13 @@ export class PublicApi {
       const socket = storedSocket ? storedSocket : await this.openSocket(to);
       socket.send(JSON.stringify(msg));
     } catch (e) {
+      const failedNotification: FailSendNotification = {
+        messageId: msg.messageId,
+        type: EventTypes.FailSendNotification,
+      };
+
+      await setMessageStatus(failedNotification);
+      this.sendingFailStream.next(failedNotification);
       console.error(e);
     }
   };

@@ -1,14 +1,21 @@
 import { Pool } from "pg";
 import {
-  buildConfirmReceivingCommand,
   buildDeleteContactQuery,
   buildGetMessagesForClientQuery,
   buildInsertMessageQuery,
+  buildSetMessageStatusCommand,
   buildUpsertContactQuery,
   createMeContactCommand,
   createTablesCommand,
 } from "./commands";
-import { Contact, Message, ReceiveConfirmation } from "../types";
+import {
+  Contact,
+  EventTypes,
+  FailSendNotification,
+  Message,
+  MessageStatus,
+  ReceiveConfirmation,
+} from "../types";
 
 const pool = new Pool({
   database: "p2p",
@@ -40,6 +47,22 @@ export const getMessagesForContact = async (contact: Contact) => {
   return await pool.query(buildGetMessagesForClientQuery(contact));
 };
 
-export const markAsReceived = async (confirmation: ReceiveConfirmation) => {
-  return await pool.query(buildConfirmReceivingCommand(confirmation.received));
+export const setMessageStatus = async (
+  event: FailSendNotification | ReceiveConfirmation
+) => {
+  let status: MessageStatus;
+  switch (event.type) {
+    case EventTypes.ReceiveConfirmation:
+      status = MessageStatus.Received;
+      break;
+    case EventTypes.FailSendNotification:
+      status = MessageStatus.FailedToSend;
+      break;
+    default:
+      status = MessageStatus.Sent;
+  }
+
+  return await pool.query(
+    buildSetMessageStatusCommand(event.messageId, status)
+  );
 };

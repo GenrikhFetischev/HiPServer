@@ -1,9 +1,9 @@
 import { Socket } from "net";
 import WebSocket, { Server as WsServer } from "ws";
-import { mergeAll, Observable, Subject, tap } from "rxjs";
-import { map, filter } from "rxjs/operators";
+import { from, mergeAll, Observable, Subject, tap } from "rxjs";
+import { filter, map } from "rxjs/operators";
 import { filterToMeMessage, parseMessage } from "../messageParser";
-import { IncomingMessage, Message } from "../types";
+import { Message, MessageStatus, PrivateApiMessage } from "../types";
 import { extractSocket, fromSocket, fromWsServer } from "../observables";
 import { identityFilter, invertFilter } from "../utils";
 import { saveMessage } from "../db";
@@ -33,8 +33,10 @@ export class PrivateWsApi {
     return msg;
   };
 
-  private setReceivedFlag = (msg: Message) => {
-    msg.received = true;
+  private setMessageStatus = (msg: Message) => {
+    if (msg.to === "me") {
+      msg.status = MessageStatus.Received;
+    }
     return msg;
   };
 
@@ -43,8 +45,8 @@ export class PrivateWsApi {
       map(parseMessage),
       filter(identityFilter),
       map(this.setFromField),
-      map(this.setReceivedFlag),
-      tap(saveMessage),
+      map(this.setMessageStatus),
+      tap((msg) => saveMessage(msg).catch(console.error)),
       tap((msg) => this.sendMessage(msg, { excludeSocket: socket })),
       filter(invertFilter(filterToMeMessage))
     );
@@ -61,7 +63,7 @@ export class PrivateWsApi {
   };
 
   public sendMessage = (
-    msg: IncomingMessage,
+    msg: PrivateApiMessage,
     { excludeSocket }: { excludeSocket?: WebSocket } = {}
   ) => {
     this.wsServer.clients.forEach((ws) => {
