@@ -7,6 +7,7 @@ import {
   buildUpsertContactQuery,
   createMeContactCommand,
   createTablesCommand,
+  getContactsQuery,
 } from "./commands";
 import {
   Contact,
@@ -16,6 +17,7 @@ import {
   MessageStatus,
   ReceiveConfirmation,
 } from "../types";
+import exp from "constants";
 
 const pool = new Pool({
   database: "p2p",
@@ -33,6 +35,10 @@ const pool = new Pool({
 
 export const createContact = async (contact: Contact) => {
   return await pool.query(buildUpsertContactQuery(contact));
+};
+
+export const getContacts = async () => {
+  return await pool.query(getContactsQuery);
 };
 
 export const deleteContact = async (contact: Contact) => {

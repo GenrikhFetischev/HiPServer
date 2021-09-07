@@ -1,6 +1,7 @@
 import crypto from "crypto";
-import jwt from "jsonwebtoken";
+import { sign, verify } from "jsonwebtoken";
 import { getOriginPassHash, salt } from "./constants";
+import assert from "assert";
 
 export const hashPassword = (pass: string, salt: string): string => {
   const hmac = crypto.createHmac("sha256", salt);
@@ -8,7 +9,7 @@ export const hashPassword = (pass: string, salt: string): string => {
 };
 
 export const generateJwtToken = (passHash: string) => {
-  return jwt.sign({ p2p: true }, passHash);
+  return sign({ p2p: true }, passHash);
 };
 
 export const validatePassword = (password: string) => {
@@ -17,4 +18,10 @@ export const validatePassword = (password: string) => {
   return (
     hashPassword(password, salt) === originPassHash && originPassHash !== null
   );
+};
+
+export const checkJwt = (jwt: string) => {
+  const originPassHash = getOriginPassHash();
+  assert(originPassHash, "impossible condition");
+  return verify(jwt, originPassHash);
 };

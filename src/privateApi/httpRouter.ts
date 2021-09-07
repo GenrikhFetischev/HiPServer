@@ -1,5 +1,8 @@
 import { IncomingMessage, ServerResponse } from "http";
 import { loginHandler } from "./login";
+import { getAllContact } from "./getContacts";
+import { checkAuth } from "./helpers/checkAuth";
+import { strictGet } from "./helpers/checkHttpMethod";
 
 export type HttpRouteHandler = (
   req: IncomingMessage,
@@ -10,6 +13,7 @@ type Routes = Map<string, HttpRouteHandler>;
 
 export const defaultRoutes = {
   "/login": loginHandler,
+  "/contacts": strictGet(checkAuth(getAllContact)),
 };
 
 export const createHttpRoutes = (

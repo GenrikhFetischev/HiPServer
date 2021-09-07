@@ -27,6 +27,10 @@ export const createMeContactCommand = `
   on conflict do nothing 
 `;
 
+export const getContactsQuery = `
+  select * from contacts;
+`;
+
 export const buildUpsertContactQuery = ({ port, name, ip }: Contact) => `
   insert into contacts (socket, ip, port, name)
   values ('${ip}:${port}', '${ip}', ${port}, '${name}')
