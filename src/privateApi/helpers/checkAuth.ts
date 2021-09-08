@@ -10,12 +10,12 @@ export const checkAuth =
       if (isAuthorized) {
         return routeHandler(req, res);
       } else {
-        res.writeHead(401);
+        res.statusCode = 401
         res.end();
       }
     } catch (e) {
       console.error(e);
-      res.writeHead(400);
+      res.statusCode = 400
       res.write(e.message);
       res.end();
     }

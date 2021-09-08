@@ -2,7 +2,8 @@ import { IncomingMessage, ServerResponse } from "http";
 import { loginHandler } from "./login";
 import { getAllContact } from "./getContacts";
 import { checkAuth } from "./helpers/checkAuth";
-import { strictGet } from "./helpers/checkHttpMethod";
+import { strictGet, strictPost } from "./helpers/checkHttpMethod";
+import { corsHandler, setCorsHeaders } from "./cors";
 
 export type HttpRouteHandler = (
   req: IncomingMessage,
@@ -12,7 +13,7 @@ export type HttpRouteHandler = (
 type Routes = Map<string, HttpRouteHandler>;
 
 export const defaultRoutes = {
-  "/login": loginHandler,
+  "/login": strictPost(loginHandler),
   "/contacts": strictGet(checkAuth(getAllContact)),
 };
 
@@ -32,7 +33,11 @@ export const createHttpRoutes = (
 export const createHttpRouter =
   (routes: Routes): HttpRouteHandler =>
   async (req, res) => {
-    console.log(req.headers);
+    if (req.method === "OPTIONS") {
+      return corsHandler(req, res);
+    }
+
+    setCorsHeaders(req, res);
 
     if (!req.url) {
       console.warn("Incoming request without url prop");
@@ -41,8 +46,12 @@ export const createHttpRouter =
 
     const routeHandler = routes.get(req.url);
     if (!routeHandler) {
-      res.writeHead(404);
+      res.statusCode = 404;
     } else {
-      routeHandler(req, res);
+      await routeHandler(req, res);
+    }
+
+    if (!res.writableEnded) {
+      res.end();
     }
   };

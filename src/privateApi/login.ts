@@ -21,17 +21,17 @@ export const loginHandler: HttpRouteHandler = async (req, res) => {
     const isPassValid = validatePassword(password);
 
     if (!isPassValid) {
-      res.writeHead(401);
+      res.statusCode = 401;
       res.write("Password is incorrect");
     } else {
-      res.writeHead(200);
+      res.statusCode = 200;
       res.write(generateJwtToken(originPassHash));
     }
 
     res.end();
   } catch (e) {
     console.error(e);
-    res.writeHead(400);
+    res.statusCode = 400;
     res.write(e.message);
     res.end();
   }

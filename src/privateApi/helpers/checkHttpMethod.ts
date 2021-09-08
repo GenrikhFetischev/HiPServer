@@ -9,10 +9,11 @@ const checkHttpMethod =
     if (possibleMethod === method) {
       return handler(req, res);
     } else {
-      res.writeHead(405);
+      res.statusCode = 405;
       res.end();
     }
   };
 
 export const strictGet = checkHttpMethod("GET");
-export const strictPods = checkHttpMethod("POST")
+export const strictPost = checkHttpMethod("POST");
+export const strictOptions = checkHttpMethod("OPTIONS");
