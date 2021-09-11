@@ -1,5 +1,7 @@
 import { IncomingMessage } from "http";
 import stream from "stream";
+import { URL } from "url";
+import { checkJwt } from "../auth";
 
 export type UpgradeHandler = (
   req: IncomingMessage,
@@ -22,11 +24,18 @@ export const createWsRouter =
       console.warn("Incoming request without url prop");
       return;
     }
+    const url = new URL(`${req.headers.origin}${req.url}`);
+    const token = url.searchParams.get("token");
+    const routeHandler = routes.get(url.pathname);
 
-    const routeHandler = routes.get(req.url);
-    if (!routeHandler) {
+    if (!routeHandler || !token) {
       socket.end();
     } else {
-      routeHandler(req, socket, head);
+      const check = checkJwt(token);
+      if (check) {
+        routeHandler(req, socket, head);
+      } else {
+        socket.end();
+      }
     }
   };

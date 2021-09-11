@@ -85,6 +85,7 @@ export class PublicApi {
       const confirmation: ReceiveConfirmation = {
         messageId: msg.messageId,
         type: EventTypes.ReceiveConfirmation,
+        chatId: msg.to,
       };
 
       socket.send(JSON.stringify(confirmation));
@@ -137,6 +138,7 @@ export class PublicApi {
       const failedNotification: FailSendNotification = {
         messageId: msg.messageId,
         type: EventTypes.FailSendNotification,
+        chatId: msg.to,
       };
 
       await setMessageStatus(failedNotification);

@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import {Pool} from "pg";
 import {
   buildDeleteContactQuery,
   buildGetMessagesForClientQuery,
@@ -17,7 +17,6 @@ import {
   MessageStatus,
   ReceiveConfirmation,
 } from "../types";
-import exp from "constants";
 
 const pool = new Pool({
   database: "p2p",

@@ -1,5 +1,3 @@
-import exp from "constants";
-
 export type MessageContent = {
   text: string;
 };
@@ -7,6 +5,7 @@ export type MessageContent = {
 export enum EventTypes {
   ReceiveConfirmation,
   FailSendNotification,
+  Message,
 }
 
 export enum MessageStatus {
@@ -16,9 +15,10 @@ export enum MessageStatus {
 }
 
 export type Message = {
+  type: EventTypes.Message;
   from: string;
   to: string;
-  messageId: number;
+  messageId: string;
   timestamp: number;
   content: MessageContent;
   status: MessageStatus;
@@ -26,14 +26,16 @@ export type Message = {
 
 export type ReceiveConfirmation = {
   type: EventTypes.ReceiveConfirmation;
-  messageId: number;
+  messageId: string;
+  chatId: string;
 };
 
 export type IncomingMessage = Message | ReceiveConfirmation;
 
 export type FailSendNotification = {
   type: EventTypes.FailSendNotification;
-  messageId: number;
+  messageId: string;
+  chatId: string;
 };
 
 export type PrivateApiMessage = IncomingMessage | FailSendNotification;
@@ -42,4 +44,5 @@ export type Contact = {
   name: string;
   port: number;
   ip: string;
+  socket: string;
 };

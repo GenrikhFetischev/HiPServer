@@ -1,9 +1,15 @@
 import { Socket } from "net";
 import WebSocket, { Server as WsServer } from "ws";
-import { from, mergeAll, Observable, Subject, tap } from "rxjs";
+import { mergeAll, Observable, Subject, tap } from "rxjs";
 import { filter, map } from "rxjs/operators";
 import { filterToMeMessage, parseMessage } from "../messageParser";
-import { Message, MessageStatus, PrivateApiMessage } from "../types";
+import {
+  EventTypes,
+  Message,
+  MessageStatus,
+  PrivateApiMessage,
+  ReceiveConfirmation,
+} from "../types";
 import { extractSocket, fromSocket, fromWsServer } from "../observables";
 import { identityFilter, invertFilter } from "../utils";
 import { saveMessage } from "../db";
@@ -40,18 +46,34 @@ export class PrivateWsApi {
     return msg;
   };
 
+  private sendConfirmation = (message: Message) => {
+    const confirmation: ReceiveConfirmation = {
+      type: EventTypes.ReceiveConfirmation,
+      messageId: message.messageId,
+      chatId: message.to,
+    };
+    this.sendMessage(confirmation);
+  };
+
   private connectionHandler = (socket: WebSocket) => {
-    const connectionObservable = fromSocket(socket).pipe(
+    const rootConnectionObservable = fromSocket(socket).pipe(
       map(parseMessage),
       filter(identityFilter),
       map(this.setFromField),
       map(this.setMessageStatus),
       tap((msg) => saveMessage(msg).catch(console.error)),
-      tap((msg) => this.sendMessage(msg, { excludeSocket: socket })),
+      tap((msg) => this.sendMessage(msg, { excludeSocket: socket }))
+    );
+
+    const toMeMessages = rootConnectionObservable
+      .pipe(filter(filterToMeMessage), tap(this.sendConfirmation))
+      .subscribe();
+
+    const toContactMessages = rootConnectionObservable.pipe(
       filter(invertFilter(filterToMeMessage))
     );
 
-    this.highOrderIncomingStream.next(connectionObservable);
+    this.highOrderIncomingStream.next(toContactMessages);
   };
 
   public upgradeConnectionHandler: UpgradeHandler = (request, socket, head) => {
