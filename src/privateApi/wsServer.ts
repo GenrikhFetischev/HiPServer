@@ -61,11 +61,11 @@ export class PrivateWsApi {
       filter(identityFilter),
       map(this.setFromField),
       map(this.setMessageStatus),
-      tap((msg) => saveMessage(msg).catch(console.error)),
+      tap(saveMessage),
       tap((msg) => this.sendMessage(msg, { excludeSocket: socket }))
     );
 
-    const toMeMessages = rootConnectionObservable
+    rootConnectionObservable
       .pipe(filter(filterToMeMessage), tap(this.sendConfirmation))
       .subscribe();
 
@@ -77,8 +77,6 @@ export class PrivateWsApi {
   };
 
   public upgradeConnectionHandler: UpgradeHandler = (request, socket, head) => {
-    console.log(request.headers);
-
     this.wsServer.handleUpgrade(request, socket as Socket, head, (ws) => {
       this.wsServer.emit("connection", ws, request);
     });

@@ -1,5 +1,4 @@
 import WebSocket, { Server } from "ws";
-import { publicPort } from "./constants";
 import { mergeAll, Observable, Subject, tap } from "rxjs";
 import {
   filterMessage,
@@ -11,7 +10,6 @@ import {
   EventTypes,
   FailSendNotification,
   Message,
-  MessageStatus,
   ReceiveConfirmation,
 } from "./types";
 import { fromSocket, fromWsServer, IncomingConnection } from "./observables";
@@ -32,7 +30,7 @@ export class PublicApi {
   public sendingFailStream = new Subject<FailSendNotification>();
   public receiveConfirmationStream: Observable<ReceiveConfirmation>;
 
-  constructor() {
+  constructor(publicPort: number) {
     this.server = new Server({ port: publicPort });
 
     fromWsServer(this.server)
@@ -98,6 +96,9 @@ export class PublicApi {
 
     const messageObservable = connectionObservable.pipe(
       filter(filterMessage),
+      tap((m) => {
+        console.log("Got incoming message", m);
+      }),
       tap(saveMessage),
       tap(sendConfirmation),
       map(setFromField)
@@ -132,6 +133,7 @@ export class PublicApi {
     const { to } = msg;
     const storedSocket = this.sockets.get(to);
     try {
+      console.log(msg);
       const socket = storedSocket ? storedSocket : await this.openSocket(to);
       socket.send(JSON.stringify(msg));
     } catch (e) {

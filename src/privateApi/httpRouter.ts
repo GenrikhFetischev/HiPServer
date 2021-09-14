@@ -4,6 +4,7 @@ import { getAllContact } from "./getContacts";
 import { checkAuth } from "./helpers/checkAuth";
 import { strictGet, strictPost } from "./helpers/checkHttpMethod";
 import { corsHandler, setCorsHeaders } from "./cors";
+import { createContactHandler } from "./createContact";
 
 export type HttpRouteHandler = (
   req: IncomingMessage,
@@ -15,6 +16,7 @@ type Routes = Map<string, HttpRouteHandler>;
 export const defaultRoutes = {
   "/login": strictPost(loginHandler),
   "/contacts": strictGet(checkAuth(getAllContact)),
+  "/contacts/create": strictPost(createContactHandler),
 };
 
 export const createHttpRoutes = (

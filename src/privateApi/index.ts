@@ -1,10 +1,9 @@
 import { createHttpApiServer } from "./httpServer";
-import { privatePort } from "../constants";
 import { PrivateWsApi } from "./wsServer";
 import { createHttpRouter, createHttpRoutes } from "./httpRouter";
 import { createWsRouter, createWsRoutes } from "./wsRouter";
 
-export const createPrivateApi = () => {
+export const createPrivateApi = (privatePort: number) => {
   const privateWsApi = new PrivateWsApi();
 
   const httpRouter = createHttpRouter(createHttpRoutes());

@@ -16,11 +16,20 @@ import { setPassword } from "./auth";
     setPassword(process.env.PASSWORD);
   }
 
-  const { privateWsApi } = createPrivateApi();
-  const publicApi = new PublicApi();
+  const privatePort = Number(process.env.PRIVATE_PORT) || 5555;
+  const publicPort = Number(process.env.PUBLIC_PORT) || 7777;
+
+  const { privateWsApi } = createPrivateApi(privatePort);
+  const publicApi = new PublicApi(publicPort);
 
   privateWsApi.messageStream.subscribe(publicApi.sendMessage);
   publicApi.messageStream.subscribe(privateWsApi.sendMessage);
   publicApi.receiveConfirmationStream.subscribe(privateWsApi.sendMessage);
   publicApi.sendingFailStream.subscribe(privateWsApi.sendMessage);
+
+  console.log(`Started on ports
+    PRIVATE: ${privatePort},
+    PUBLIC: ${publicPort}
+  
+  `);
 })();

@@ -79,5 +79,5 @@ export const buildSetMessageStatusCommand = (
 ) => `
     update messages
     set status = ${status}
-    where messageId = ${messageId}
+    where messageId = '${messageId}'
 `;

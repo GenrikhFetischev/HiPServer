@@ -1,4 +1,4 @@
-import {Pool} from "pg";
+import { Pool } from "pg";
 import {
   buildDeleteContactQuery,
   buildGetMessagesForClientQuery,
@@ -45,7 +45,12 @@ export const deleteContact = async (contact: Contact) => {
 };
 
 export const saveMessage = async (msg: Message) => {
-  return await pool.query(buildInsertMessageQuery(msg));
+  try {
+    await pool.query(buildInsertMessageQuery(msg));
+  } catch (e) {
+    console.log("Can't save message");
+    console.error(e);
+  }
 };
 
 export const getMessagesForContact = async (contact: Contact) => {
@@ -67,7 +72,11 @@ export const setMessageStatus = async (
       status = MessageStatus.Sent;
   }
 
-  return await pool.query(
-    buildSetMessageStatusCommand(event.messageId, status)
-  );
+  const sqlReq = buildSetMessageStatusCommand(event.messageId, status);
+  try {
+    await pool.query(sqlReq);
+  } catch (e) {
+    console.error(`Failed to set message status with req: ${sqlReq}`);
+    console.error(e);
+  }
 };
