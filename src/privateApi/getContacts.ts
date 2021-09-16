@@ -1,6 +1,8 @@
 import { HttpRouteHandler } from "./httpRouter";
 import { getContacts } from "../db";
 
+export const getAllContactRouteMatcher = (path: string) =>  path === "/contacts";
+
 export const getAllContact: HttpRouteHandler = async (req, res) => {
   const contacts = await getContacts();
 

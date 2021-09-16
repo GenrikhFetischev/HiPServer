@@ -7,6 +7,8 @@ export type LoginBody = {
   password: string;
 };
 
+export const loginRouteMatcher = (path: string) => path === "/login";
+
 export const loginHandler: HttpRouteHandler = async (req, res) => {
   try {
     assert(

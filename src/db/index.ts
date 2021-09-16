@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { Pool, QueryResult } from "pg";
 import {
   buildDeleteContactQuery,
   buildGetMessagesForClientQuery,
@@ -11,6 +11,7 @@ import {
 } from "./commands";
 import {
   Contact,
+  DbMessage,
   EventTypes,
   FailSendNotification,
   Message,
@@ -53,8 +54,21 @@ export const saveMessage = async (msg: Message) => {
   }
 };
 
-export const getMessagesForContact = async (contact: Contact) => {
-  return await pool.query(buildGetMessagesForClientQuery(contact));
+export const getMessagesForContact = async (
+  host: string
+): Promise<QueryResult<DbMessage>> => {
+  try {
+    return await pool.query<DbMessage>(buildGetMessagesForClientQuery(host));
+  } catch (e) {
+    console.error(e);
+    return {
+      rows: [],
+      command: "SELECT",
+      rowCount: 0,
+      oid: 0,
+      fields: [],
+    };
+  }
 };
 
 export const setMessageStatus = async (

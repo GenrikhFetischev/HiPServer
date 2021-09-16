@@ -1,35 +1,35 @@
 import { IncomingMessage, ServerResponse } from "http";
-import { loginHandler } from "./login";
-import { getAllContact } from "./getContacts";
+import { loginHandler, loginRouteMatcher } from "./login";
+import { getAllContact, getAllContactRouteMatcher } from "./getContacts";
 import { checkAuth } from "./helpers/checkAuth";
 import { strictGet, strictPost } from "./helpers/checkHttpMethod";
 import { corsHandler, setCorsHeaders } from "./cors";
-import { createContactHandler } from "./createContact";
+import {
+  createContactHandler,
+  createContactRouteMatcher,
+} from "./createContact";
+import { getMessagesByContact, getMessagesPathMatcher } from "./getMessages";
 
 export type HttpRouteHandler = (
   req: IncomingMessage,
   res: ServerResponse
 ) => Promise<void> | void;
 
-type Routes = Map<string, HttpRouteHandler>;
+type RouteMatcher = (path: string) => boolean;
 
-export const defaultRoutes = {
-  "/login": strictPost(loginHandler),
-  "/contacts": strictGet(checkAuth(getAllContact)),
-  "/contacts/create": strictPost(createContactHandler),
-};
+type Routes = Map<RouteMatcher, HttpRouteHandler>;
+
+export const defaultRoutes: Array<[RouteMatcher, HttpRouteHandler]> = [
+  [loginRouteMatcher, strictPost(loginHandler)],
+  [getAllContactRouteMatcher, strictGet(checkAuth(getAllContact))],
+  [createContactRouteMatcher, strictPost(createContactHandler)],
+  [getMessagesPathMatcher, strictGet(checkAuth(getMessagesByContact))],
+];
 
 export const createHttpRoutes = (
-  routes: {
-    [path: string]: HttpRouteHandler;
-  } = {}
+  routes: Array<[RouteMatcher, HttpRouteHandler]> = []
 ): Routes => {
-  return new Map(
-    Object.entries({
-      ...defaultRoutes,
-      ...routes,
-    })
-  );
+  return new Map([...defaultRoutes, ...routes]);
 };
 
 export const createHttpRouter =
@@ -41,12 +41,18 @@ export const createHttpRouter =
 
     setCorsHeaders(req, res);
 
-    if (!req.url) {
+    const reqUrl = req.url;
+
+    if (!reqUrl) {
       console.warn("Incoming request without url prop");
       return;
     }
 
-    const routeHandler = routes.get(req.url);
+    const [_, routeHandler] =
+      [...routes.entries()].find(([routeMatcher]) => {
+        return routeMatcher(reqUrl);
+      }) || [];
+
     if (!routeHandler) {
       res.statusCode = 404;
     } else {

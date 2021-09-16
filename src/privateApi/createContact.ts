@@ -4,6 +4,8 @@ import { parseJsonPostBody } from "./utils";
 import { Contact } from "../types";
 import { createContact } from "../db";
 
+export const createContactRouteMatcher = (path: string) => path === "/contacts/create"
+
 export const createContactHandler: HttpRouteHandler = async (req, res) => {
   try {
     assert(

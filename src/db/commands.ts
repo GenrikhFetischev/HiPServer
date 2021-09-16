@@ -3,11 +3,10 @@ import { Contact, Message, MessageStatus } from "../types";
 export const createTablesCommand = `
     CREATE TABLE IF NOT EXISTS contacts
     (
-        socket  varchar(50) primary key not null,
+        id      uuid                    not null default gen_random_uuid(),
+        host    varchar(50) primary key not null,
         created timestamp               not null default now(),
-        port    int,
-        name    varchar(200),
-        ip      varchar(50)
+        name    varchar(200)
     );
 
 
@@ -17,15 +16,15 @@ export const createTablesCommand = `
         status    int8             default 0,
         timestamp bigint      not null,
         messageId varchar(50) not null,
-        "from"    varchar(50) references "contacts" (socket),
-        "to"      varchar(50) references "contacts" (socket),
+        "from"    varchar(50) references "contacts" (host),
+        "to"      varchar(50) references "contacts" (host),
         text      varchar
     )
 `;
 
 export const createMeContactCommand = `
-    insert into contacts (socket, port, name, ip)
-    values ('me', 0, 'me', 'me')
+    insert into contacts (host, name)
+    values ('me', 'me')
     on conflict do nothing
 `;
 
@@ -34,19 +33,17 @@ export const getContactsQuery = `
     from contacts;
 `;
 
-export const buildUpsertContactQuery = ({ port, name, ip }: Contact) => `
-    insert into contacts (socket, ip, port, name)
-    values ('${ip}:${port}', '${ip}', ${port}, '${name}')
-    on conflict (socket) do update set port   = ${port},
-                                       ip     = '${ip}',
-                                       socket = '${ip}:${port}',
-                                       name   = '${name}'
+export const buildUpsertContactQuery = ({ name, host }: Contact) => `
+    insert into contacts (host, name)
+    values ('${host}', '${name}')
+    on conflict (host) do update set host = '${host}',
+                                     name = '${name}'
 `;
 
-export const buildDeleteContactQuery = ({ ip, port }: Contact) => `
+export const buildDeleteContactQuery = ({ host }: Contact) => `
     delete
-    from "contacts"
-    where socket = '${ip}:${port}'
+    from contacts
+    where host = '${host}'
 `;
 
 export const buildInsertMessageQuery = ({
@@ -61,14 +58,12 @@ export const buildInsertMessageQuery = ({
     values ('${from}', '${to}', '${content.text}', ${timestamp}, ${status}, '${messageId}');
 `;
 
-export const buildGetMessagesForClientQuery = (contact: Contact) => {
-  const socket = `${contact.ip}:${contact.port}`;
-
+export const buildGetMessagesForClientQuery = (host: string) => {
   return `
-      select
+      select *
       from messages
-      where "from" = '${socket}'
-         or "to" = '${socket}'
+      where "from" = '${host}'
+         or "to" = '${host}'
       order by timestamp
   `;
 };

@@ -24,6 +24,16 @@ export type Message = {
   status: MessageStatus;
 };
 
+export type DbMessage = {
+  type: EventTypes.Message;
+  from: string;
+  to: string;
+  messageId: string;
+  timestamp: number;
+  text: string;
+  status: MessageStatus;
+};
+
 export type ReceiveConfirmation = {
   type: EventTypes.ReceiveConfirmation;
   messageId: string;
@@ -42,7 +52,5 @@ export type PrivateApiMessage = IncomingMessage | FailSendNotification;
 
 export type Contact = {
   name: string;
-  port: number;
-  ip: string;
-  socket: string;
+  host: string;
 };
