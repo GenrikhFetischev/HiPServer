@@ -20,7 +20,7 @@ import {
 } from "../types";
 
 const pool = new Pool({
-  database: "p2p",
+  database: "hip",
 });
 
 (async () => {
