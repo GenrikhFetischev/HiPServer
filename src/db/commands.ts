@@ -22,6 +22,9 @@ export const createTablesCommand = `
     )
 `;
 
+export const createExtensionCommand =
+  "CREATE EXTENSION IF NOT EXISTS pgcrypto;";
+
 export const createMeContactCommand = `
     insert into contacts (host, name)
     values ('me', 'me')

@@ -96,12 +96,12 @@ export class PublicApi {
 
     const messageObservable = connectionObservable.pipe(
       filter(filterMessage),
+      tap(sendConfirmation),
+      map(setFromField),
       tap((m) => {
         console.log("Got incoming message", m);
       }),
-      tap(saveMessage),
-      tap(sendConfirmation),
-      map(setFromField)
+      tap(saveMessage)
     );
 
     const confirmationStream = connectionObservable.pipe(

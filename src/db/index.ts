@@ -5,6 +5,7 @@ import {
   buildInsertMessageQuery,
   buildSetMessageStatusCommand,
   buildUpsertContactQuery,
+  createExtensionCommand,
   createMeContactCommand,
   createTablesCommand,
   getContactsQuery,
@@ -25,6 +26,7 @@ const pool = new Pool({
 
 (async () => {
   try {
+    await pool.query(createExtensionCommand);
     await pool.query(createTablesCommand);
     await pool.query(createMeContactCommand);
   } catch (e) {
